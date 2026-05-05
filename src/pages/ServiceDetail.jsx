@@ -1,45 +1,58 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { CATEGORIES } from "../utils/mockData";
-import { useAuth } from "../context/AuthContext";
 import { supabase } from "../services/supabase";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import { StarRating } from "../components/StarRating";
+import { ReviewForm } from "../components/ReviewForm";
+import { ReviewsList } from "../components/ReviewsList";
+import { ChatWidget } from "../components/ChatWidget";
 
 export function ServiceDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [service, setService] = useState(null);
   const [relatedServices, setRelatedServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [reviewsKey, setReviewsKey] = useState(0);
 
-  useEffect(() => {
-    const fetchServiceData = async () => {
-      setLoading(true);
-      
-      // 1. Obtener el servicio actual
-      const { data: serviceData, error: serviceError } = await supabase
-        .from("services")
-        .select(`
-          *,
-          professional:user_id (
-            id,
-            full_name,
-            avatar_url,
-            is_verified
-          )
-        `)
-        .eq("id", id)
-        .single();
+  const fetchServiceData = async () => {
+    setLoading(true);
+    
+    // 1. Obtener el servicio actual
+    const { data: serviceData, error: serviceError } = await supabase
+      .from("services")
+      .select(`
+        *,
+        rating_avg,
+        reviews_count,
+        professional:user_id (
+          id,
+          full_name,
+          avatar_url,
+          is_verified,
+          role,
+          rating_avg,
+          reviews_count
+        )
+      `)
+      .eq("id", id)
+      .single();
 
-      if (serviceError) {
-        console.error("Error cargando servicio:", serviceError);
-        setService(null);
-        setLoading(false);
-        return;
-      }
+    if (serviceError) {
+      console.error("Error cargando servicio:", serviceError);
+      setService(null);
+      setLoading(false);
+      return;
+    }
 
-      setService(serviceData);
+    setService(serviceData);
 
       // 2. Obtener servicios relacionados (misma categoría, distinto ID)
       if (serviceData?.category) {
@@ -61,10 +74,23 @@ export function ServiceDetail() {
           
         setRelatedServices(relatedData || []);
       }
+
+      // 3. Verificar si es favorito (si el usuario está logueado)
+      if (user) {
+        const { data: favoriteData } = await supabase
+          .from("favorites")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("service_id", id)
+          .maybeSingle();
+        
+        setIsFavorite(!!favoriteData);
+      }
       
       setLoading(false);
     };
 
+  useEffect(() => {
     fetchServiceData();
   }, [id]);
 
@@ -121,10 +147,14 @@ export function ServiceDetail() {
           <div className="card-static detail-content">
             {/* Header */}
             <div className="detail-header">
-              <span className="explore-card-category">
-                {category?.icon} {category?.label}
-              </span>
+              <div className="explore-card-category">{service.category}</div>
               <h1 className="detail-title">{service.title}</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "0.5rem" }}>
+                <StarRating rating={service.rating_avg} size={1.1} />
+                <span style={{ fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                  ({service.reviews_count || 0} reseñas)
+                </span>
+              </div>
             </div>
 
             {/* Descripción */}
@@ -163,6 +193,25 @@ export function ServiceDetail() {
                 </div>
               </div>
             </div>
+
+            <hr className="profile-divider" />
+
+            {/* Sección de Reseñas */}
+            <section className="detail-section" style={{ padding: '0 2rem 2rem' }}>
+              <h2 className="detail-section-title">Opiniones de clientes</h2>
+              <ReviewsList serviceId={service.id} refreshTrigger={reviewsKey} />
+              
+              {user && user.id !== service.professional?.id && (
+                <ReviewForm 
+                  serviceId={service.id} 
+                  professionalId={service.professional?.id} 
+                  onReviewSubmit={() => {
+                    setReviewsKey(prev => prev + 1);
+                    fetchServiceData(); // Recargar datos del servicio (promedio/conteo)
+                  }} 
+                />
+              )}
+            </section>
           </div>
         </div>
 
@@ -200,13 +249,13 @@ export function ServiceDetail() {
             <div className="sidebar-pro-stats">
               <div className="sidebar-pro-stat">
                 <span className="sidebar-pro-stat-value">
-                  ⭐ Nuevo
+                  ⭐ {service.professional?.rating_avg || 'Nuevo'}
                 </span>
                 <span className="sidebar-pro-stat-label">Calificación</span>
               </div>
               <div className="sidebar-pro-stat">
                 <span className="sidebar-pro-stat-value">
-                  0
+                  {service.professional?.reviews_count || 0}
                 </span>
                 <span className="sidebar-pro-stat-label">Reseñas</span>
               </div>
@@ -220,16 +269,37 @@ export function ServiceDetail() {
                   if (!user) {
                     navigate("/login");
                   } else {
-                    alert(
-                      "¡Función de contacto próximamente! Aquí se abrirá un chat con " + service.professional?.full_name
-                    );
+                    setIsChatOpen(true);
                   }
                 }}
               >
                 💬 Contactar profesional
               </button>
-              <button className="btn btn-secondary" style={{ width: "100%" }}>
-                ❤️ Guardar en favoritos
+
+              <button 
+                className={`btn ${isFavorite ? 'btn-primary' : 'btn-secondary'}`} 
+                style={{ width: "100%" }}
+                onClick={async () => {
+                  if (!user) return navigate("/login");
+                  
+                  if (isFavorite) {
+                    // Eliminar de favoritos
+                    await supabase
+                      .from("favorites")
+                      .delete()
+                      .eq("user_id", user.id)
+                      .eq("service_id", service.id);
+                    setIsFavorite(false);
+                  } else {
+                    // Agregar a favoritos
+                    await supabase
+                      .from("favorites")
+                      .insert({ user_id: user.id, service_id: service.id });
+                    setIsFavorite(true);
+                  }
+                }}
+              >
+                {isFavorite ? '❤️ Guardado' : '🤍 Guardar en favoritos'}
               </button>
             </div>
           </div>
@@ -277,10 +347,10 @@ export function ServiceDetail() {
                     <div>
                       <span className="explore-card-name" style={{ display: 'flex', alignItems: 'center' }}>
                         {s.professional?.full_name}
-                        {s.professional?.is_verified && <span className="verified-badge" title="Verificado">✓</span>}
+                        {s.professional?.is_verified && <span className="verified-badge" title="Verificado" style={{ marginLeft: "8px" }}>✓</span>}
                       </span>
                       <span className="explore-card-rating">
-                        ⭐ Nuevo
+                        {s.rating_avg > 0 ? `⭐ ${Number(s.rating_avg).toFixed(1)}` : "⭐ Nuevo"}
                       </span>
                     </div>
                   </div>
@@ -291,6 +361,14 @@ export function ServiceDetail() {
           </div>
         </section>
       )}
+
+      <ChatWidget 
+        isOpen={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        professionalName={service.professional?.full_name}
+        serviceTitle={service.title}
+      />
     </div>
   );
 }
+

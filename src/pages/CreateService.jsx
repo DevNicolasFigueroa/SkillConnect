@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link, useParams } from "react-router-dom";
+import { useToast } from "../context/ToastContext";
 import { CATEGORIES } from "../utils/mockData";
 
 export function CreateService() {
@@ -17,6 +18,7 @@ export function CreateService() {
   const [error, setError] = useState(null);
   
   const { user } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -77,7 +79,9 @@ export function CreateService() {
 
     if (result.error) {
       setError("Error al guardar: " + result.error.message);
+      showToast("Error al guardar el servicio", "error");
     } else {
+      showToast(isEditing ? "¡Servicio actualizado con éxito!" : "¡Servicio publicado con éxito!", "success");
       navigate("/dashboard");
     }
   };

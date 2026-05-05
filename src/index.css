@@ -5,27 +5,24 @@
 
 /* --- CSS Variables (Design Tokens) --- */
 :root {
-  /* Background layers (darkest → lighter) */
-  --bg-deep: #07090F;
-  --bg-base: #0C1019;
-  --bg-surface: #141924;
-  --bg-elevated: #1C2333;
-  --bg-hover: #242D40;
+  /* Default: Ocean Deep */
+  --bg-deep: #050B14;
+  --bg-base: #0A1628;
+  --bg-surface: #122540;
+  --bg-elevated: #1B3458;
+  --bg-hover: #254470;
 
-  /* Accent: Warm Coral → Amber gradient */
-  --accent-start: #FF6B35;
-  --accent-end: #F7A31E;
+  --accent-start: #00D2FF;
+  --accent-end: #3A7BD5;
   --accent-gradient: linear-gradient(135deg, var(--accent-start), var(--accent-end));
-  --accent-glow: rgba(255, 107, 53, 0.25);
-  --accent-subtle: rgba(255, 107, 53, 0.08);
+  --accent-glow: rgba(0, 210, 255, 0.25);
+  --accent-subtle: rgba(0, 210, 255, 0.08);
 
-  /* Text */
-  --text-primary: #F0EDE8;
-  --text-secondary: #9BA3B5;
+  --text-primary: #E0F2FE;
+  --text-secondary: #94A3B8;
   --text-muted: #5C6478;
-  --text-accent: #FF8C55;
+  --text-accent: #38BDF8;
 
-  /* Semantic */
   --success: #2DD4A0;
   --success-bg: rgba(45, 212, 160, 0.1);
   --error: #F87171;
@@ -33,17 +30,14 @@
   --warning: #FBBF24;
   --info: #60A5FA;
 
-  /* Borders */
   --border-subtle: rgba(255, 255, 255, 0.06);
   --border-default: rgba(255, 255, 255, 0.1);
-  --border-accent: rgba(255, 107, 53, 0.3);
+  --border-accent: rgba(0, 210, 255, 0.3);
 
-  /* Glass effect */
-  --glass-bg: rgba(20, 25, 36, 0.7);
+  --glass-bg: rgba(10, 22, 40, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
   --glass-blur: 20px;
 
-  /* Typography */
   --font-display: 'Syne', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
 
@@ -68,7 +62,7 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-accent: 0 4px 24px rgba(255, 107, 53, 0.2);
+  --shadow-accent: 0 4px 24px rgba(0, 210, 255, 0.2);
 
   /* Transitions */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -76,7 +70,49 @@
   --duration-fast: 150ms;
   --duration-normal: 300ms;
   --duration-slow: 500ms;
+
+  /* Mesh */
+  --mesh-1: rgba(0, 210, 255, 0.12);
+  --mesh-2: rgba(58, 123, 213, 0.1);
+  --mesh-3: rgba(0, 210, 255, 0.05);
 }
+
+[data-theme="light"] {
+  --bg-deep: #F8FAFC;
+  --bg-base: #FFFFFF;
+  --bg-surface: #F1F5F9;
+  --bg-elevated: #E2E8F0;
+  --bg-hover: #CBD5E1;
+
+  --accent-start: #0EA5E9;
+  --accent-end: #0284C7;
+  --accent-glow: rgba(14, 165, 233, 0.15);
+  --accent-subtle: rgba(14, 165, 233, 0.05);
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-accent: #0284C7;
+
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-accent: rgba(14, 165, 233, 0.2);
+
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  
+  --mesh-1: rgba(14, 165, 233, 0.08);
+  --mesh-2: rgba(58, 123, 213, 0.05);
+  --mesh-3: rgba(14, 165, 233, 0.03);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+  --shadow-accent: 0 4px 20px rgba(14, 165, 233, 0.1);
+}
+
+
+
 
 /* --- Reset & Base --- */
 *,
@@ -108,10 +144,67 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 0;
 }
+
+/* Mesh Gradients */
+.mesh-gradient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: var(--bg-deep);
+  transition: background var(--duration-slow) var(--ease-out);
+}
+
+.mesh-sphere {
+  position: absolute;
+  filter: blur(100px);
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: float 20s infinite alternate ease-in-out;
+}
+
+.mesh-1 {
+  width: 60vw;
+  height: 60vw;
+  background: var(--mesh-1);
+  top: -10vw;
+  left: -10vw;
+}
+
+.mesh-2 {
+  width: 50vw;
+  height: 50vw;
+  background: var(--mesh-2);
+  bottom: -10vw;
+  right: -10vw;
+  animation-delay: -5s;
+}
+
+.mesh-3 {
+  width: 40vw;
+  height: 40vw;
+  background: var(--mesh-3);
+  top: 30%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 15s infinite alternate ease-in-out;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(10vw, 5vh) scale(1.1); }
+}
+
+@keyframes pulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 0.4; }
+  100% { transform: translate(-45%, -55%) scale(1.2); opacity: 0.7; }
+}
+
 
 #root {
   position: relative;

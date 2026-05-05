@@ -1,83 +1,109 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { CATEGORIES } from "../utils/mockData";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 
 export function Services() {
+  const [searchParams] = useSearchParams();
+  const urlCategory = searchParams.get("category");
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState(urlCategory || "all");
   const [sortBy, setSortBy] = useState("recent");
   
   const { user, profile } = useAuth();
   const isProfessional = profile?.role === "professional";
   const navigate = useNavigate();
 
-  // Nuevos estados para los datos reales
+  // Estados para los datos reales y paginación
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 6;
 
-  // 1. Efecto para cargar los servicios desde Supabase
+  // Actualizar categoría seleccionada si cambia la URL
+  useEffect(() => {
+    if (urlCategory) {
+      setActiveCategory(urlCategory);
+    }
+  }, [urlCategory]);
+
+  // 1. Cargar servicios (se dispara al cambiar filtros o página)
   useEffect(() => {
     const fetchServices = async () => {
-      setLoading(true);
-      // Consulta a la tabla services
-      // La sintaxis profiles:user_id(...) hace el JOIN automático con la tabla profiles
-      const { data, error } = await supabase
-        .from("services")
-        .select(`
-          *,
-          professional:user_id (
-            id,
-            full_name,
-            avatar_url,
-            is_verified
-          )
-        `)
-        .eq("is_available", true); // Solo mostramos los disponibles
+      if (page === 0) setLoading(true);
+      else setLoadingMore(true);
 
-      if (error) {
-        console.error("Error al cargar servicios:", error);
-      } else {
-        setServices(data || []);
+      try {
+        let query = supabase
+          .from("services")
+          .select(`
+            *,
+            professional:user_id (
+              id,
+              full_name,
+              avatar_url,
+              is_verified,
+              role
+            )
+          `)
+          .eq("is_available", true);
+
+        // Filtros en base de datos (más eficiente)
+        if (activeCategory !== "all") {
+          query = query.eq("category", activeCategory);
+        }
+
+        if (searchQuery.trim()) {
+          query = query.ilike("title", `%${searchQuery}%`);
+        }
+
+        // Orden en base de datos
+        if (sortBy === "price-low") {
+          query = query.order("price", { ascending: true });
+        } else if (sortBy === "price-high") {
+          query = query.order("price", { ascending: false });
+        } else {
+          query = query.order("created_at", { ascending: false });
+        }
+
+        // Rango de paginación
+        const from = page * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
+        query = query.range(from, to);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        if (page === 0) {
+          setServices(data || []);
+        } else {
+          setServices(prev => [...prev, ...(data || [])]);
+        }
+
+        setHasMore(data.length === PAGE_SIZE);
+      } catch (err) {
+        console.error("Error al cargar servicios:", err);
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-      setLoading(false);
     };
 
     fetchServices();
-  }, []);
+  }, [activeCategory, sortBy, searchQuery, page]);
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setPage(0);
+  }, [activeCategory, sortBy, searchQuery]);
 
   // 2. Filtrar y ordenar servicios (ahora sobre 'services' en vez de MOCK_SERVICES)
-  const filteredServices = useMemo(() => {
-    let result = [...services];
-
-    // Filtro por categoría
-    if (activeCategory !== "all") {
-      result = result.filter((s) => s.category === activeCategory);
-    }
-
-    // Filtro por búsqueda
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (s) =>
-          s.title?.toLowerCase().includes(query) ||
-          s.description?.toLowerCase().includes(query) ||
-          s.professional?.full_name?.toLowerCase().includes(query)
-      );
-    }
-
-    // Ordenar
-    if (sortBy === "price-low") {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortBy === "price-high") {
-      result.sort((a, b) => b.price - a.price);
-    } else if (sortBy === "recent") {
-      result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    }
-
-    return result;
-  }, [searchQuery, activeCategory, sortBy, services]);
+  const filteredServices = services;
 
   // Obtener el label de la categoría
   const getCategoryLabel = (value) => {
@@ -229,62 +255,79 @@ export function Services() {
           </div>
         </div>
       ) : (
-        <div className="explore-grid">
-          {filteredServices.map((service, i) => (
-            <Link
-              to={`/service/${service.id}`}
-              key={service.id}
-              className={`explore-card animate-in animate-delay-${Math.min(i + 1, 6)}`}
-            >
-              {/* Etiqueta de categoría */}
-              <div className="explore-card-top">
-                <span className="explore-card-category">
-                  {getCategoryIcon(service.category)}{" "}
-                  {getCategoryLabel(service.category)}
-                </span>
-                {service.is_available && (
-                  <span className="badge badge-success">Disponible</span>
-                )}
-              </div>
+        <>
+          <div className="explore-grid">
+            {filteredServices.map((service, i) => (
+              <Link
+                to={`/service/${service.id}`}
+                key={service.id}
+                className={`explore-card animate-in animate-delay-${Math.min((i % 6) + 1, 6)}`}
+              >
+                {/* Etiqueta de categoría */}
+                <div className="explore-card-top">
+                  <span className="explore-card-category">
+                    {getCategoryIcon(service.category)}{" "}
+                    {getCategoryLabel(service.category)}
+                  </span>
+                  {service.is_available && (
+                    <span className="badge badge-success">Disponible</span>
+                  )}
+                </div>
 
-              {/* Contenido */}
-              <h3 className="explore-card-title">{service.title}</h3>
-              <p className="explore-card-desc">{service.description}</p>
+                {/* Contenido */}
+                <h3 className="explore-card-title">{service.title}</h3>
+                <p className="explore-card-desc">{service.description}</p>
 
-              {/* Footer: profesional + precio */}
-              <div className="explore-card-footer">
-                <div className="explore-card-author">
-                  <div className="explore-card-avatar">
-                    {service.professional?.avatar_url ? (
-                      <img 
-                        src={service.professional.avatar_url} 
-                        alt="Avatar" 
-                        style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      getInitials(service.professional?.full_name)
-                    )}
-                  </div>
-                  <div>
-                    <span className="explore-card-name" style={{ display: 'flex', alignItems: 'center' }}>
-                      {service.professional?.full_name || "Usuario"}
-                      {service.professional?.role === 'professional' && service.professional?.is_verified && (
-                        <span className="verified-badge" title="Verificado">✓</span>
+                {/* Footer: profesional + precio */}
+                <div className="explore-card-footer">
+                  <div className="explore-card-author">
+                    <div className="explore-card-avatar">
+                      {service.professional?.avatar_url ? (
+                        <img 
+                          src={service.professional.avatar_url} 
+                          alt="Avatar" 
+                          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} 
+                        />
+                      ) : (
+                        <div className="avatar-initials">
+                          {service.professional?.full_name?.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2) || "?"}
+                        </div>
                       )}
-                    </span>
-                    <span className="explore-card-rating">
-                      ⭐ Nuevo
-                    </span>
+                    </div>
+                    <div>
+                      <span className="explore-card-name" style={{ display: 'flex', alignItems: 'center' }}>
+                        {service.professional?.full_name || "Usuario"}
+                        {service.professional?.role === 'professional' && service.professional?.is_verified && (
+                          <span className="verified-badge" title="Verificado" style={{ marginLeft: "8px" }}>✓</span>
+                        )}
+                      </span>
+                      <span className="explore-card-rating">
+                        {service.rating_avg > 0 ? `⭐ ${Number(service.rating_avg).toFixed(1)}` : "⭐ Nuevo"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="explore-card-price">
+                    ${service.price}
                   </div>
                 </div>
-                <div className="explore-card-price">
-                  ${service.price}
-                  <span className="explore-card-price-label">/proyecto</span>
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Botón Cargar Más */}
+          {hasMore && (
+            <div className="pagination-container animate-in" style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem', paddingBottom: '2rem' }}>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setPage(prev => prev + 1)}
+                disabled={loadingMore}
+                style={{ minWidth: '200px' }}
+              >
+                {loadingMore ? "Cargando más..." : "Cargar más servicios"}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

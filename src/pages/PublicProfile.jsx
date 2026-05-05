@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "../services/supabase";
+import { StarRating } from "../components/StarRating";
+import { ReviewsList } from "../components/ReviewsList";
 import { CATEGORIES } from "../utils/mockData";
 import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
 
 export function PublicProfile() {
   const { id } = useParams();
   const { user: currentUser } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   
   const [profile, setProfile] = useState(null);
@@ -101,18 +105,28 @@ export function PublicProfile() {
               <h1 className="profile-public-name">
                 {profile.full_name}
                 {profile.role === 'professional' && profile.is_verified && (
-                  <span className="verified-badge-lg" title="Verificado">✓</span>
+                  <span className="verified-badge-lg" title="Verificado" style={{ marginLeft: "8px" }}>✓</span>
                 )}
               </h1>
               <p className="profile-public-role">
                 {profile.role === 'professional' ? `🚀 ${profile.profession || 'Profesional Destacado'}` : '👤 Cliente'}
               </p>
               <div className="profile-public-stats">
-                <span className="stat-item">⭐ 5.0 (Nuevas reseñas)</span>
+                <StarRating rating={profile.rating_avg} size={0.9} />
+                <a 
+                  href="#reviews-section" 
+                  style={{ fontSize: "0.85rem", color: "var(--primary)", textDecoration: "none", fontWeight: "600", cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  ({profile.reviews_count || 0} reseñas)
+                </a>
                 <span className="stat-separator">•</span>
-                <span className="stat-item">📍 Chile</span>
+                <span className="stat-item">📍 {profile.location || 'Chile'}</span>
                 <span className="stat-separator">•</span>
-                <span className="stat-item">🕒 {profile.experience_years || 0} años de experiencia</span>
+                <span className="stat-item">🕒 {profile.experience_years || 0} años de exp.</span>
               </div>
               
               <div className="profile-public-contact-bar">
@@ -137,7 +151,7 @@ export function PublicProfile() {
               <div className="profile-public-actions">
                 <button 
                   className="btn btn-primary"
-                  onClick={() => alert("¡Chat con " + profile.full_name + " próximamente!")}
+                  onClick={() => showToast("¡Chat con " + profile.full_name + " próximamente!", "info")}
                 >
                   💬 Contactar ahora
                 </button>
@@ -194,6 +208,14 @@ export function PublicProfile() {
             </div>
           )}
         </div>
+
+        {/* Sección de Reseñas del Profesional */}
+        <section id="reviews-section" className="card-static" style={{ marginTop: "2rem", padding: "2rem" }}>
+          <h3 className="detail-section-title" style={{ marginBottom: "1.5rem" }}>
+            Opiniones sobre {profile.full_name.split(' ')[0]}
+          </h3>
+          <ReviewsList professionalId={profile.id} />
+        </section>
       </div>
     </div>
   );

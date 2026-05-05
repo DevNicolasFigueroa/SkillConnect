@@ -9,28 +9,38 @@ export function Home() {
       {/* ── Hero Section ── */}
       <section className="hero">
         <div className="hero-content">
-          <h1 className="animate-in">
-            Conecta con los{" "}
-            <span className="text-gradient">mejores profesionales</span>
+          <div
+            className="badge badge-accent animate-in"
+            style={{ marginBottom: "var(--space-md)" }}
+          >
+            NUEVA PLATAFORMA 2026
+          </div>
+          <h1
+            className="animate-in"
+            style={{ fontWeight: 900, textTransform: "uppercase" }}
+          >
+            Domina el <span className="text-gradient">Mercado Digital</span> con
+            SkillConnect
           </h1>
           <p className="hero-subtitle">
-            Encuentra talento experto, calificado y confiable para cualquier
-            proyecto. La red de servicios líder para impulsar tu éxito.
+            La plataforma definitiva donde el talento excepcional se encuentra
+            con oportunidades ilimitadas. Eleva tus proyectos con profesionales
+            de élite.
           </p>
           <div className="hero-actions">
             {user ? (
               <>
-                <Link to="/dashboard" className="btn btn-primary">
-                  Ir a mi perfil →
+                <Link to="/services" className="btn btn-primary btn-lg-glow">
+                  Explorar Talentos
                 </Link>
-                <Link to="/services" className="btn btn-secondary">
-                  Explorar Servicios
+                <Link to="/dashboard" className="btn btn-secondary">
+                  Mi Panel de Control
                 </Link>
               </>
             ) : (
               <>
-                <Link to="/services" className="btn btn-primary">
-                  Explorar Servicios →
+                <Link to="/services" className="btn btn-primary btn-lg-glow">
+                  Explorar Talentos
                 </Link>
                 <Link to="/login" className="btn btn-secondary">
                   Iniciar Sesión

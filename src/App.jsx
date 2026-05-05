@@ -10,75 +10,32 @@ import { ServiceDetail } from "./pages/ServiceDetail";
 import ProtectedRoute from "./pages/ProtectedRoute";
 import { CreateService } from "./pages/CreateService";
 import { PublicProfile } from "./pages/PublicProfile";
+import { ThemeProvider } from "./context/ThemeContext";
+import { BackgroundEffects } from "./components/BackgroundEffects";
+import { ThemeSwitcher } from "./components/ThemeSwitcher";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
 
 import "./App.css";
 
-function Navbar() {
-  const { user, profile } = useAuth();
-  const location = useLocation();
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
-
-  const getInitials = () => {
-    const name = profile?.full_name || user?.user_metadata?.fullName;
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((word) => word[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
+function NotFound() {
   return (
-    <nav className="navbar">
-      <Link to="/" className="navbar-brand">
-        <span className="navbar-brand-icon">⚡</span>
-        SkillConnect
-      </Link>
-
-      <div className="navbar-links">
-        {location.pathname !== "/" && location.pathname !== "/services" && (
-          <Link to="/services" className="navbar-link">
-            Explorar
-          </Link>
-        )}
-
-        {user ? (
-          <>
-            <div className="navbar-divider" />
-            <Link to="/dashboard" className="navbar-user-info" style={{ textDecoration: 'none', cursor: 'pointer' }}>
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="navbar-avatar" style={{ objectFit: 'cover' }} />
-              ) : (
-                <div className="navbar-avatar">{getInitials()}</div>
-              )}
-              <span className="navbar-email">{user.email}</span>
-            </Link>
-            <button className="btn btn-ghost btn-sm" onClick={handleLogout}>
-              Cerrar sesión
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" className="navbar-link">
-              Iniciar sesión
-            </Link>
-            <Link to="/register" className="btn btn-primary btn-sm">
-              Registrarse
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
+    <div className="page-container" style={{ textAlign: 'center', paddingTop: '10vh' }}>
+      <h1 style={{ fontSize: '8rem', marginBottom: '0', opacity: 0.2 }}>404</h1>
+      <h2 style={{ marginTop: '-2rem' }}>Página no encontrada</h2>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+        Lo sentimos, el enlace que seguiste no existe o ha sido movido.
+      </p>
+      <Link to="/" className="btn btn-primary">Volver al Inicio</Link>
+    </div>
   );
 }
 
-function App() {
+
+function AppContent() {
   return (
     <BrowserRouter>
+      <BackgroundEffects />
       <Navbar />
       <main className="main-content">
         <Routes>
@@ -112,10 +69,21 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
+      <Footer />
     </BrowserRouter>
   );
 }
 
+function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
 export default App;
+
