@@ -9,20 +9,34 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    setProfile(data);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (error) throw error;
+      setProfile(data);
+    } catch (err) {
+      console.error("Error al obtener perfil:", err);
+    }
   };
 
   useEffect(() => {
+    if (!supabase || !supabase.auth) {
+      console.error("El cliente de autenticación de Supabase no está disponible.");
+      setLoading(false);
+      return;
+    }
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
       }
+      setLoading(false);
+    }).catch(err => {
+      console.error("Error al obtener la sesión de Supabase:", err);
       setLoading(false);
     });
 
@@ -38,7 +52,7 @@ export function AuthProvider({ children }) {
     });
 
     return () => {
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
   }, []);
 
